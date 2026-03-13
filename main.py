@@ -11,6 +11,20 @@ def extract_text(file_path):
 
     return pages
 
+def simple_chunking(pages):
+    pages_str = " ".join(pages)
+    chunks = []
+    for i in range(0,len(pages_str),400):
+        chunk = pages_str[i:i+500]
+        chunks.append(chunk)
+
+    if len(chunks[-1]) != 500:
+     chunks[-1] = pages_str[-500:]
+    return chunks
+
+
 file_path = sys.argv[1]
 extracted_pages = extract_text(file_path)
-print(extracted_pages[0])
+chunks = simple_chunking(extracted_pages)
+
+print(chunks[0])
