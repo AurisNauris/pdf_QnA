@@ -1,5 +1,6 @@
 import pymupdf
 import sys
+from sentence_transformers import SentenceTransformer 
 
 def extract_text(file_path):
     doc = pymupdf.open(file_path)
@@ -28,3 +29,9 @@ extracted_pages = extract_text(file_path)
 chunks = simple_chunking(extracted_pages)
 
 print(chunks[0])
+
+model = SentenceTransformer("all-MiniLM-L6-v2")
+embedding = model.encode(chunks[:2])
+print("-"*10)
+print(embedding)
+print("embedding shape:", embedding.shape)
