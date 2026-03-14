@@ -5,6 +5,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import chromadb
 import pprint
+from dotenv import load_dotenv
+from anthropic import Anthropic
+load_dotenv()
 
 def extract_text(file_path):
     doc = pymupdf.open(file_path)
@@ -58,31 +61,35 @@ def basic_similarity_check(list_of_sentences):
 file_path = sys.argv[1]
 extracted_pages = extract_text(file_path)
 chunks = simple_chunking(extracted_pages)
-#embedding = model.encode(chunks[:2])
-#print("-"*10)
-#print(embedding)
-#print("embedding shape:", embedding.shape)
 
-# test_sentences = ["The cat sat on the mat",
-#                  "The kitten was sitting on the rug",
-#                  "Stock prices rose sharply today",
-#                  "The mat sat on the cat",
-#                  "The dog sat on the cat",
-#                  "The stock market is devasted by the recent crisis",
-#                  "I am running out of money to pay for my rent"
-#                  ]
-
-#basic_similarity_check(test_sentences)
-# print(list(range(len(test_sentences))))
 chroma_client = chromadb.Client()
 collection = chroma_client.create_collection(name="test_collection")
-
 ids = [str(i) for i in range(len(chunks))]
-
 collection.add(ids=ids,
-               documents=chunks)
+               documents=chunks,
+               )
 
-results = collection.query(query_texts = ["I am intereted in the very first neural network."],
-                           n_results=3,)
+results = collection.query(query_texts = sys.argv[2],
+                           n_results=5,
+                           )
 
-print(results["documents"][0])
+client = Anthropic() # automatically picks up API key from .env using load_dotenv()
+
+context = "\n\n".join(results["documents"][0])
+prompt = f"""Based on the following context, answer the question.
+
+Context:
+{context}
+
+Question: {sys.argv[3]}
+
+If information not found in the context, respond that "Information not found in the context"
+
+"""
+
+response = client.messages.create(model="claude-haiku-4-5-20251001",
+                                  max_tokens=1024*4,
+                                  messages=[{"role":"user","content":prompt}]
+                                  )
+
+print(response.content[0].text)
