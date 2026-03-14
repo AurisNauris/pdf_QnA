@@ -1,9 +1,10 @@
 import pymupdf
 import sys
-from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 import matplotlib.pyplot as plt
+import chromadb
+import pprint
 
 def extract_text(file_path):
     doc = pymupdf.open(file_path)
@@ -27,6 +28,8 @@ def simple_chunking(pages):
     return chunks
 
 def basic_similarity_check(list_of_sentences):
+    from sentence_transformers import SentenceTransformer
+
     model = SentenceTransformer("all-MiniLM-L6-v2")
     embeddings = model.encode(list_of_sentences)
     sim_matrix = np.full(shape=(len(embeddings),len(embeddings)),fill_value=np.nan)
@@ -52,19 +55,34 @@ def basic_similarity_check(list_of_sentences):
     plt.imshow(sim_matrix)
     plt.show()
 
-#file_path = sys.argv[1]
-#extracted_pages = extract_text(file_path)
-#chunks = simple_chunking(extracted_pages)
+file_path = sys.argv[1]
+extracted_pages = extract_text(file_path)
+chunks = simple_chunking(extracted_pages)
 #embedding = model.encode(chunks[:2])
 #print("-"*10)
 #print(embedding)
 #print("embedding shape:", embedding.shape)
 
-test_sentences = ["The cat sat on the mat",
-                 "The kitten was sitting on the rug",
-                 "Stock prices rose sharply today",
-                 "The mat sat on the cat",
-                 "The dog sat on the cat"
-                 ]
+# test_sentences = ["The cat sat on the mat",
+#                  "The kitten was sitting on the rug",
+#                  "Stock prices rose sharply today",
+#                  "The mat sat on the cat",
+#                  "The dog sat on the cat",
+#                  "The stock market is devasted by the recent crisis",
+#                  "I am running out of money to pay for my rent"
+#                  ]
 
-basic_similarity_check(test_sentences)
+#basic_similarity_check(test_sentences)
+# print(list(range(len(test_sentences))))
+chroma_client = chromadb.Client()
+collection = chroma_client.create_collection(name="test_collection")
+
+ids = [str(i) for i in range(len(chunks))]
+
+collection.add(ids=ids,
+               documents=chunks)
+
+results = collection.query(query_texts = ["I am intereted in the very first neural network."],
+                           n_results=3,)
+
+print(results["documents"][0])
